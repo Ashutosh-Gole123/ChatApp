@@ -7,7 +7,7 @@ function Login() {
     const [password, setPassword] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
-
+    
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -22,7 +22,7 @@ function Login() {
         const result = await response.json();
 
         if (result.status === 'success') {
-            login(); // Set authentication status
+            login(email); // Set authentication status
             navigate('/home'); // Redirect to home page
             // Handle successful login (e.g., redirect to another page)
         } else {

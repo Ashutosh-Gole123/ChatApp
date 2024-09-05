@@ -11,7 +11,7 @@ function Register() {
     const [email, setEmail] = useState('');
     const [image, setImage] = useState(null);
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated,login } = useAuth();
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -45,7 +45,7 @@ function Register() {
             const result = await response.json();
     
             if (result.status === 'success') {
-                alert(result.message);
+                login(email); 
                 navigate('/login'); // Redirect to login page or home page
 
             } else {

@@ -1,19 +1,26 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import io from "socket.io-client";
 import { ChatContext } from "./context/ChatContext";
 
 // Initialize your Socket.IO client connection
 const socket = io("http://localhost:5000");
 
-const ChatComponent = () => {
+const Input = () => {
   const [text, setText] = useState("");
   const [img, setImg] = useState(null);
   const { data } = useContext(ChatContext); // Access the context
-
+  const [email,setEmail] = useState('')
+  useEffect(() => {
+    const storedEmail = localStorage.getItem('Email');
+    if (storedEmail) {
+      setEmail(storedEmail);
+    }
+  },[])
   const handleSend = () => {
     const messageData = {
       chat_id: data.chatId,
-      sender_id: data.user.email, // Assuming user object contains the sender's ID
+      sender_email: data.user.email, // Assuming user object contains the sender's ID
+      receiver_email: email,
       message: text,
       // Include image if it's available
       image: img ? {
@@ -45,4 +52,4 @@ const ChatComponent = () => {
   );
 };
 
-export default ChatComponent;
+export default Input;

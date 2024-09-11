@@ -17,7 +17,7 @@ Follow the steps below to get your Flask project up and running:
    ```bash
    python -m venv venv
 
-    Activate the virtual environment:
+Activate the virtual environment:
     
     ```bash
     venv\Scripts\activate

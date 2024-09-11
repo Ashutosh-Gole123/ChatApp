@@ -1,8 +1,34 @@
-# React + Vite
+# React Project Setup with Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This guide provides instructions on how to set up a React project using Vite, a fast development tool that offers an optimized build and a lightning-fast development environment.
 
-Currently, two official plugins are available:
+## Prerequisites
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Ensure you have the following installed on your machine:
+
+- **Node.js** (version 14.18+ recommended): You can download it from the [official Node.js website](https://nodejs.org/).
+- **npm** (Node Package Manager) or **yarn**.
+
+## Step-by-Step Setup
+
+Follow these steps to set up your React project using Vite:
+
+### Step 1: Create a New React Project with Vite
+
+1. Open your terminal or command prompt.
+2. Run the following command to create a new Vite project:
+
+   ```bash
+   npm create vite@latest frontend -- --template react
+
+3. Navigate to your new project directory:
+    ```bash 
+    cd frontend
+
+4. Install the necessary dependencies by running:
+    ```bash 
+    npm install
+
+5. Start the Development Server
+    ```bash
+    npm run dev

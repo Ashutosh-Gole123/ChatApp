@@ -16,45 +16,6 @@ app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
 CORS(app)
 
-
-
-
-
-
-# @socketio.on('connect')
-# def on_connect():
-#     print("A user connected")
-
-# @socketio.on('add_user')
-# def add_user(data):
-#     username = data['username']
-#     if username not in users:
-#         users.append(username)
-#     emit('update_user_list', users, broadcast=True)
-
-# @socketio.on('create_room')
-# def create_room(data):
-#     room = data['room']
-#     username = data['username']
-#     join_room(room)
-#     send(f"{username} has entered the room.", to=room)
-#     emit('message', f"{username} has entered the room.", room=room)
-
-# @socketio.on('leave_room')
-# def leave_room_event(data):
-#     username = data['username']
-#     room = data['room']
-#     leave_room(room)
-#     send(f"{username} has left the room.", to=room)
-#     emit('message', f"{username} has left the room.", room=room)
-
-# @socketio.on('message')
-# def handle_message(data):
-#     room = data['room']
-#     message = data['message']
-#     send(message, to=room)  # This sends the message to all clients in the room
-
-
 # Registration route
 @app.route('/register', methods=['POST'])
 def register():
@@ -96,13 +57,11 @@ def get_db_connection():
     """Function to get a connection to the MySQL database."""
     return connection
 
+
 @socketio.on('create_chat_session')
 def handle_create_chat_session(data):
     email1 = data['user1']  # Sender's email
     email2 = data['user2']  # Receiver's email
-
-    conn = None
-    cursor = None
 
     try:
         conn = get_db_connection()
@@ -155,29 +114,21 @@ def handle_create_chat_session(data):
         emit('error', {'message': 'An unexpected error occurred. Please try again.'})
         return
 
-    # finally:
-    #     # Ensure the cursor and connection are always closed properly
-    #     if cursor:
-    #         cursor.close()
-    #     if conn:
-    #         conn.close()
-
     # Emit the chat session ID to the client
     emit('chat_session_created', {'chat_id': chat_id})
 
 @socketio.on('send_message')
 def handle_send_message(data):
     chat_id = data.get('chat_id')
-    email = data.get('sender_id')
+    sender_email = data.get('sender_email')
+    receiver_email = data.get('receiver_email')
     message = data.get('message')
     image = data.get('image')  # Optional image data
 
-    if not chat_id or not email or not message:
+    if not chat_id or not sender_email or not receiver_email or not message:
         emit('error', {'message': 'Chat ID, sender ID, and message are required.'})
         return
 
-    conn = None
-    cursor = None
 
     try:
         conn = get_db_connection()
@@ -187,15 +138,21 @@ def handle_send_message(data):
         message_id = str(uuid.uuid4())
         cursor.execute("""
         SELECT user_id FROM Users WHERE email = %s
-        """, (email,))
+        """, (sender_email,))
         sender_ids = cursor.fetchone()
-
         sender_id = sender_ids[0]
+
+        cursor.execute("""
+        SELECT user_id FROM Users WHERE email = %s
+        """, (receiver_email,))
+        receiver_ids = cursor.fetchone()
+
+        receiver_id = receiver_ids[0]
 
         # Insert the message into the ChatMessage table
         cursor.execute("""
-        INSERT INTO ChatMessage (message_id, chat_id, sender_id, message) VALUES (%s, %s, %s, %s)
-        """, (message_id, chat_id, sender_id, message))
+        INSERT INTO ChatMessage (message_id, chat_id, sender_id, receiver_id, message) VALUES (%s, %s, %s, %s, %s)
+        """, (message_id, chat_id, sender_id, receiver_id, message))
         conn.commit()
 
         # Optionally handle image data
@@ -213,11 +170,7 @@ def handle_send_message(data):
     except Exception as e:
         logging.error("Unexpected error: %s", e)
         emit('error', {'message': 'An unexpected error occurred. Please try again.'})
-    # finally:
-    #     if cursor:
-    #         cursor.close()
-    #     if conn:
-    #         conn.close()
+  
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')

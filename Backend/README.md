@@ -17,17 +17,19 @@ Follow the steps below to get your Flask project up and running:
    ```bash
    python -m venv venv
 
-Activate the virtual environment:
-    
+3. **Activate the virtual environment:**
+    Run:
+
     ```bash
     venv\Scripts\activate
 
-3. **Install Requirements:**
+4. **Install Requirements:**
     Use below command
     ```bash
     pip install -r requirements.txt
 
-4. **Run python app:**
+5. **Run python app:**
     Run:
+    
     ```bash
     python app.py

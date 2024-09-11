@@ -8,12 +8,12 @@ function Home() {
   return (
     <>
       <UserProvider>
-        <div className="flex h-auto w-full">
+        <div className="flex h-full w-full">
           {/* Sidebar */}
           <Sidebar className="w-1/4  bg-gray-800 text-white" />
 
           {/* Main Content Area */}
-          <div className="flex w-5/6">
+          <div className="flex h-full w-5/6">
             {/* Header */}
             <Header className=" bg-gray-900 text-white" />
 

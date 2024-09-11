@@ -7,15 +7,18 @@ from Auth import register_user, login_user, connection
 from API import All_Users
 import logging  # Import logging for error tracking
 import mysql.connector
+from datetime import datetime
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
-CORS(app)
-app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, cors_allowed_origins="*")
-CORS(app)
 
+# Configure CORS for Flask
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
+
+# Configure Flask-SocketIO
+socketio = SocketIO(app, cors_allowed_origins="http://localhost:5173")
 # Registration route
 @app.route('/register', methods=['POST'])
 def register():
@@ -161,8 +164,23 @@ def handle_send_message(data):
             INSERT INTO ChatMessageImages (message_id, chat_id, sender_id, file_name, file_type, file_url) VALUES (%s, %s, %s, %s, %s, %s)
             """, (message_id, chat_id, sender_id, image['file_name'], image['file_type'], image['file_data']))  # Adjust storage as needed
             conn.commit()
-
-        emit('new_message', data, room=chat_id)
+        # Example logging
+        logging.info("Emitting new message: %s", {
+            'message_id': message_id,
+            'chat_id': chat_id,
+            'sender_id': sender_id,
+            'receiver_id': receiver_id,
+            'message': message,
+            'timestamp': datetime.now().isoformat()
+        })
+        emit('new_message', {
+            'message_id': message_id,
+            'chat_id': chat_id,
+            'sender_id': sender_id,
+            'receiver_id': receiver_id,
+            'message': message,
+            'timestamp': datetime.now().isoformat()
+        }, room=chat_id)
 
     except mysql.connector.Error as e:
         logging.error("Database error: %s", e)
@@ -170,7 +188,52 @@ def handle_send_message(data):
     except Exception as e:
         logging.error("Unexpected error: %s", e)
         emit('error', {'message': 'An unexpected error occurred. Please try again.'})
-  
+
+@socketio.on('fetch_messages')
+def handle_fetch_messages(data):
+    chat_id = data.get('chat_id')
+
+    if not chat_id:
+        emit('error', {'message': 'Chat ID is required.'})
+        return
+
+    conn = None
+    cursor = None
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Fetch messages for the specified chat_id
+        cursor.execute("""
+        SELECT message_id, sender_id, receiver_id, message, timestamp 
+        FROM ChatMessage WHERE chat_id = %s ORDER BY timestamp ASC
+        """, (chat_id,))
+
+        messages = cursor.fetchall()
+
+
+# Format datetime objects in each message
+        for message in messages:
+            if isinstance(message['timestamp'], datetime):
+                message['timestamp'] = message['timestamp'].isoformat()
+
+        emit('messages_fetched', {'messages': messages})
+        
+
+    except mysql.connector.Error as e:
+        logging.error("Database error: %s", e)
+        emit('error', {'message': 'An error occurred while fetching messages.'})
+    except Exception as e:
+        logging.error("Unexpected error: %s", e)
+        emit('error', {'message': 'An unexpected error occurred.'})
+    # finally:
+    #     if cursor:
+    #         cursor.close()
+    #     if conn:
+    #         conn.close()
+
+
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')

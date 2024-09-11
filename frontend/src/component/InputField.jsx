@@ -5,7 +5,7 @@ import { ChatContext } from "./context/ChatContext";
 // Initialize your Socket.IO client connection
 const socket = io("http://localhost:5000");
 
-const Input = () => {
+const InputField = () => {
   const [text, setText] = useState("");
   const [img, setImg] = useState(null);
   const { data } = useContext(ChatContext); // Access the context
@@ -32,6 +32,7 @@ const Input = () => {
 
     // Emit the message event
     socket.emit("send_message", messageData);
+    // window.location.reload();
 
     // Reset form fields
     setText("");
@@ -52,4 +53,4 @@ const Input = () => {
   );
 };
 
-export default Input;
+export default InputField;

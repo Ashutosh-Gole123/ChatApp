@@ -20,7 +20,8 @@ function Login() {
         });
 
         const result = await response.json();
-
+        console.log(result);
+        
         if (result.status === 'success') {
             login(email); // Set authentication status
             navigate('/home'); // Redirect to home page

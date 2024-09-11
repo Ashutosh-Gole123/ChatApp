@@ -12,7 +12,7 @@ export default function Header() {
   }
   return (
     <>
-      <div className="flex-1 flex h-20 bg-slate-600 items-center justify-between text-white p-3 fixed w-5/6">
+      <div className="flex-1 z-10 flex h-20 bg-slate-600 items-center justify-between text-white p-3 fixed w-5/6">
   <div className="flex items-center gap-x-4">
     <img
       className="inline-block h-14 w-14 duration-300 rounded-full ring-2 ring-[#FBE6A3]"

@@ -23,7 +23,7 @@ def All_Users():
             
         cursor = connection.cursor()
         # SQL query to fetch all users' details
-        sql_query = "SELECT username, email, profile_image FROM Users"
+        sql_query = "SELECT user_id, username, email, profile_image FROM Users"
         cursor.execute(sql_query)
         
         # Fetch all user data
@@ -31,7 +31,7 @@ def All_Users():
         
         users_list = []
         for user in all_users:
-            username, email, profile_image = user
+            user_id, username, email, profile_image = user
             # Convert the binary image data to base64
             profile_image_base64 = None
             if profile_image:
@@ -39,6 +39,7 @@ def All_Users():
             
             
             users_list.append({
+                "user_id": user_id,
                 "username": username,
                 "email": email,
                 "profile_image": profile_image_base64

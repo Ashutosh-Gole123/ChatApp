@@ -97,11 +97,12 @@ export default function Sidebar() {
         <ul className="pt-6 max-w-md divide-y divide-gray-500 hover:divide-grey-300">
           {users.map(
             (user, index) =>
+              
               user.email !== email && (
                 <li
-                  key={index}
-                  className="flex text-gray-300 text-sm items-center gap-x-4 cursor-pointer p-2 hover:bg-light-white rounded-md "
-                  onClick={() => handleUserClick(user)}
+                key={index}
+                className="flex text-gray-300 text-sm items-center gap-x-4 cursor-pointer p-2 hover:bg-light-white rounded-md "
+                onClick={() => handleUserClick(user)}
                 >
                   <img
                     className={`inline-block ${

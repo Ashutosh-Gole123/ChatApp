@@ -7,57 +7,9 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./component/ProtectedRoute";
 // const socket = io('http://localhost:5000'); // Adjust if your Flask server is on a different host or port
 import { useAuth } from "./component/context/AuthContext";
+import EditProfile from "./component/profile/editProfile";
 function App() {
-  // const [username, setUsername] = useState('');
-  // const [userList, setUserList] = useState([]);
-  // const [room, setRoom] = useState('');
-  // const [message, setMessage] = useState('');
-  // const [messages, setMessages] = useState([]);
-  // const [activeRoom, setActiveRoom] = useState('');
-
-  // useEffect(() => {
-  //   socket.on('update_user_list', (userList) => {
-  //     setUserList(userList);
-  //   });
-
-  //   socket.on('message', (msg) => {
-  //     setMessages((prevMessages) => [...prevMessages, msg]);
-  //   });
-
-  //   return () => {
-  //     socket.off('update_user_list');
-  //     socket.off('message');
-  //   };
-  // }, []);
-
-  // const addUser = () => {
-  //   if (username) {
-  //     socket.emit('add_user', { username });
-  //     setUsername(''); // Clear input field
-  //   }
-  // };
-
-  // const createRoomFromUser = (user) => {
-  //   const newRoom = `Room with ${user}`;
-  //   setRoom(newRoom);
-  //   socket.emit('create_room', { room: newRoom, username });
-  //   setActiveRoom(newRoom); // Set the active room
-  // };
-
-  // const leaveRoom = () => {
-  //   if (activeRoom && username) {
-  //     socket.emit('leave_room', { username, room: activeRoom });
-  //     setActiveRoom('');
-  //     setRoom('');
-  //   }
-  // };
-
-  // const sendMessage = () => {
-  //   if (activeRoom && message) {
-  //     socket.emit('message', { room: activeRoom, message });
-  //     setMessage('');
-  //   }
-  // };
+ 
   const { isAuthenticated } = useAuth();
   
   return (
@@ -73,6 +25,10 @@ function App() {
             <Route
               path="/home"
               element={<ProtectedRoute element={<Home />} />}
+            />
+            <Route
+              path="/user/profile"
+              element={<ProtectedRoute element={<EditProfile />} />}
             />
             <Route path="*" element={<Navigate to="/home" />} />{" "}
             {/* Redirect unknown routes */}

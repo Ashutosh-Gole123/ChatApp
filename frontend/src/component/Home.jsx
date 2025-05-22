@@ -5,6 +5,8 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import ChatPanel from "./ChatPanel";
 function Home() {
+const sidebarVisible = true;
+
   return (
     <>
       <UserProvider>
@@ -13,14 +15,15 @@ function Home() {
           <Sidebar className="w-1/4  bg-gray-800 text-white" />
 
           {/* Main Content Area */}
-          <div className="flex h-full w-5/6">
-            {/* Header */}
-            <Header className=" bg-gray-900 text-white" />
+         <div className="flex flex-col w-5/6 h-screen overflow-hidden">
+  <Header sidebarVisible={sidebarVisible} />
+  <div className="flex-1 overflow-y-auto">
+    <ChatPanel />
+  </div>
+</div>
 
-            {/* Content */}
-              <ChatPanel className="flex "/>
-          </div>
         </div>
+       
       </UserProvider>
     </>
   );

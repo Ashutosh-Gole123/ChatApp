@@ -2,6 +2,8 @@ import mysql.connector
 import os
 from dotenv import load_dotenv
 import base64
+from Auth import connection
+import logging
 
 load_dotenv()
 
@@ -48,4 +50,181 @@ def All_Users():
         return users_list
 
 All_Users()
+
+# Add these functions to your existing API.py file
+
+
+
+def All_Users():
+    """Function to fetch all users from the database."""
+    try:
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT user_id, username, email, profile_image
+            FROM Users
+        """)
+        users = cursor.fetchall()
+        
+        # Process the results
+        processed_users = []
+        for user in users:
+            # Convert binary profile image to base64 string if it exists
+            profile_image = None
+            if user['profile_image']:
+                profile_image = base64.b64encode(user['profile_image']).decode('utf-8')
+                
+            processed_users.append({
+                'user_id': user['user_id'],
+                'username': user['username'],
+                'email': user['email'],
+                'profile_image': profile_image
+            })
+            
+        return processed_users
+    except Exception as e:
+        logging.error(f"Error fetching users: {e}")
+        return []
+    finally:
+        cursor.close()
+
+def Get_User_Contacts(email):
+    """Function to fetch all contacts for a specific user."""
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get user ID from email
+        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (email,))
+        user_result = cursor.fetchone()
+        
+        if not user_result:
+            return []
+            
+        user_id = user_result['user_id']
+        
+        # Get all contacts for this user
+        cursor.execute("""
+            SELECT u.user_id, u.username, u.email, u.profile_image 
+            FROM Contacts c
+            JOIN Users u ON c.contact_user_id = u.user_id
+            WHERE c.user_id = %s
+        """, (user_id,))
+        
+        contacts = cursor.fetchall()
+        
+        # Process the results
+        processed_contacts = []
+        for contact in contacts:
+            # Convert binary profile image to base64 string if it exists
+            profile_image = None
+            if contact['profile_image']:
+                profile_image = base64.b64encode(contact['profile_image']).decode('utf-8')
+                
+            processed_contacts.append({
+                'user_id': contact['user_id'],
+                'username': contact['username'],
+                'email': contact['email'],
+                'profile_image': profile_image
+            })
+            
+        return processed_contacts
+    except Exception as e:
+        logging.error(f"Error fetching contacts: {e}")
+        return []
+    finally:
+        cursor.close()
+
+def Add_Contact(user_email, contact_email):
+    """Function to add a contact for a user."""
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get user IDs from emails
+        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (user_email,))
+        user_result = cursor.fetchone()
+        
+        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (contact_email,))
+        contact_result = cursor.fetchone()
+        
+        if not user_result or not contact_result:
+            return {"status": "error", "message": "One or both users not found"}
+            
+        user_id = user_result['user_id']
+        contact_user_id = contact_result['user_id']
+        
+        # Check if the contact already exists
+        cursor.execute("""
+            SELECT contact_id FROM Contacts
+            WHERE user_id = %s AND contact_user_id = %s
+        """, (user_id, contact_user_id))
+        
+        if cursor.fetchone():
+            return {"status": "error", "message": "Contact already exists"}
+            
+        # Create contact IDs
+        import uuid
+        contact_id1 = str(uuid.uuid4())
+        contact_id2 = str(uuid.uuid4())
+        
+        # Add first direction
+        cursor.execute("""
+            INSERT INTO Contacts (contact_id, user_id, contact_user_id)
+            VALUES (%s, %s, %s)
+        """, (contact_id1, user_id, contact_user_id))
+        
+        # Add second direction
+        cursor.execute("""
+            INSERT INTO Contacts (contact_id, user_id, contact_user_id)
+            VALUES (%s, %s, %s)
+        """, (contact_id2, contact_user_id, user_id))
+        
+        connection.commit()
+        
+        return {"status": "success", "message": "Contact added successfully"}
+        
+    except Exception as e:
+        connection.rollback()
+        logging.error(f"Error adding contact: {e}")
+        return {"status": "error", "message": str(e)}
+    finally:
+        cursor.close()
+
+def Remove_Contact(user_email, contact_email):
+    """Function to remove a contact for a user."""
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        # Get user IDs from emails
+        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (user_email,))
+        user_result = cursor.fetchone()
+        
+        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (contact_email,))
+        contact_result = cursor.fetchone()
+        
+        if not user_result or not contact_result:
+            return {"status": "error", "message": "One or both users not found"}
+            
+        user_id = user_result['user_id']
+        contact_user_id = contact_result['user_id']
+        
+        # Remove contact in both directions
+        cursor.execute("""
+            DELETE FROM Contacts
+            WHERE (user_id = %s AND contact_user_id = %s)
+            OR (user_id = %s AND contact_user_id = %s)
+        """, (user_id, contact_user_id, contact_user_id, user_id))
+        
+        rows_affected = cursor.rowcount
+        connection.commit()
+        
+        if rows_affected > 0:
+            return {"status": "success", "message": "Contact removed successfully"}
+        else:
+            return {"status": "error", "message": "Contact relationship not found"}
+        
+    except Exception as e:
+        connection.rollback()
+        logging.error(f"Error removing contact: {e}")
+        return {"status": "error", "message": str(e)}
+    finally:
+        cursor.close()
       

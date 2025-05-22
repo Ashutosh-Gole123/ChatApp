@@ -16,6 +16,7 @@ export function UserProvider({children}){
     const [currUser, setCurrUser] = useState({
         name: '',
         email: '',
+        profile: ''
         // Add other user details here
       });
     function updateUser(newUserDetails){

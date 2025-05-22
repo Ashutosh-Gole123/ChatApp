@@ -24,6 +24,9 @@ function Login() {
         
         if (result.status === 'success') {
             login(email); // Set authentication status
+            // After successful login
+            localStorage.setItem('Email', email);  // or user_id
+
             navigate('/home'); // Redirect to home page
             // Handle successful login (e.g., redirect to another page)
         } else {

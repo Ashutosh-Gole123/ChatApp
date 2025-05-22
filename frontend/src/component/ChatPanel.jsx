@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 import { ChatContext } from "./context/ChatContext";
 import InputField from "./InputField";
@@ -16,41 +16,52 @@ function ChatPanel() {
   const [text, setText] = useState("");
   const [img, setImg] = useState(null);
   const { data } = useContext(ChatContext); // Access the context
-  const [email, setEmail] = useState("");
-  console.log(data.chatId);
-
-  // Fetch messages when the chat panel loads or when chat_id changes
+  const [email, setEmail] = useState(localStorage.getItem("Email") || "");
+  const chatPanelRef = useRef(null);
   useEffect(() => {
-    const storedEmail = localStorage.getItem("Email");
-    socket.on('connect', () => {
-      console.log('Connected to server');
+    // Fetch messages and listen for new messages when component mounts
+    socket.on("connect", () => {
+      console.log("Connected to server");
+
+      // Join the chat room
+      
+      // Fetch existing messages
     });
-    if (storedEmail) {
-      setEmail(storedEmail);
-    }
-    if (data.chatId) {
-      console.log("Fetching messages for chat ID:", data.chatId);
-      socket.emit("fetch_messages", { chat_id: data.chatId });
+    socket.emit("join_room", { chat_id: data.chatId });
+    socket.emit("fetch_messages", { chat_id: data.chatId });
 
-      socket.on("messages_fetched", (response) => {
-        console.log("Messages fetched:", response.messages);
-        setMessages(response.messages);
-      });
+    socket.on("messages_fetched", (response) => {
+      console.log("Messages fetched:", response.messages);
+      setMessages(response.messages);
+    });
 
-      socket.on("new_message", (newMessage) => {
-        console.log("New message received:", newMessage);
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
-      });
+    socket.on("new_message", (newMessage) => {
+      console.log("New message received:", newMessage.message);
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    });
+    socket.emit("send_message",  {chat_id: data.chatId,
+      sender_email: email,
+      receiver_email: data.receiverEmail,
+      message: text});
 
-      // Clean up socket listeners on component unmount
-      return () => {
-        console.log("Cleaning up socket listeners");
-        socket.off("messages_fetched");
-        socket.off("new_message");
-      };
-    }
+    socket.on("room_joined", (data) => {
+      console.log("Joined room:", data.chat_id);
+    });
+
+    // Clean up socket listeners on component unmount
+    return () => {
+      console.log("Cleaning up socket listeners");
+      socket.off("connect");
+      socket.off("messages_fetched");
+      socket.off("new_message");
+      socket.off("room_joined");
+    };
   }, [data.chatId]);
-
+  useEffect(() => {
+    if (chatPanelRef.current) {
+      chatPanelRef.current.scrollTop = chatPanelRef.current.scrollHeight;
+    }
+  }, [messages]);
   const handleSend = () => {
     const messageData = {
       chat_id: data.chatId,
@@ -78,7 +89,7 @@ function ChatPanel() {
   return (
     <div className="chat-panel flex flex-col h-screen w-full bg-zinc-600">
   {/* Messages container */}
-  <div className="messages-container flex-1 overflow-y-auto p-3">
+  <div className="messages-container flex-1 overflow-y-auto p-3" ref={chatPanelRef}>
     {messages.map((msg) => (
       <div
         key={msg.message_id}
@@ -95,18 +106,18 @@ function ChatPanel() {
   </div>
   
   {/* Input container */}
-  <div className="input-container flex p-3 bg-gray-800">
+  <div className="input-container flex p-3 bg-gray-800 sticky bottom-0 w-full">
     <input
       type="text"
       value={text}
       onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          handleSend();
+        }
+      }}
       className="flex-1 p-2 border border-gray-300 rounded"
       placeholder="Type a message"
-    />
-    <input
-      type="file"
-      onChange={(e) => setImg(e.target.files[0])}
-      className="ml-2"
     />
     <button
       onClick={handleSend}

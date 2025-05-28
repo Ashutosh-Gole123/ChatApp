@@ -1,133 +1,274 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import io from "socket.io-client";
+import React, { useContext, useEffect, useState } from "react";
 import { ChatContext } from "./context/ChatContext";
-import InputField from "./InputField";
+import socketService from "./services/socketServices";
 import "../App.css";
-// Initialize your Socket.IO client connection
-const socket = io("http://localhost:5000", {
-  transports: ["websocket"], // For WebSocket connection
-  reconnection: true,
-  reconnectionAttempts: 5,
-  reconnectionDelay: 1000,
-  debug: true, // Enable debugging
-});
+import ChatHeader from "./chat_panel/ChatHeader";
+import ConversationSummary from "./chat_panel/ConversationSummary";
+import MessagesContainer from "./chat_panel/MessageContainer";
+import SmartReplies from "./chat_panel/SmartReplies";
+import MessageInput from "./chat_panel/MessageInput";
+import AIToolsPanel from "./chat_panel/AIToolsPanel";
+
 function ChatPanel() {
+  // State management
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [img, setImg] = useState(null);
-  const { data } = useContext(ChatContext); // Access the context
+  const { data } = useContext(ChatContext);
   const [email, setEmail] = useState(localStorage.getItem("Email") || "");
-  const chatPanelRef = useRef(null);
+  const [receiverId, setReceiverId] = useState(localStorage.getItem("ReceiverId") || "");
+  
+  // AI-related states
+  const [smartReplies, setSmartReplies] = useState([]);
+  const [showAITools, setShowAITools] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+  const [conversationSummary, setConversationSummary] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("es");
+  const [enhancementType, setEnhancementType] = useState("grammar");
+
+  // Socket setup and cleanup
   useEffect(() => {
-    // Fetch messages and listen for new messages when component mounts
-    socket.on("connect", () => {
-      console.log("Connected to server");
+    const socket = socketService.connect();
+    
+    // Join room and fetch messages
+    socketService.joinRoom(data.chatId);
+    socketService.fetchMessages(data.chatId);
 
-      // Join the chat room
-      
-      // Fetch existing messages
-    });
-    socket.emit("join_room", { chat_id: data.chatId });
-    socket.emit("fetch_messages", { chat_id: data.chatId });
+    // Set up event listeners
+    setupSocketListeners();
 
-    socket.on("messages_fetched", (response) => {
+    // Cleanup on unmount
+    return () => {
+      socketService.removeAllListeners();
+    };
+  }, [data.chatId]);
+
+const shouldShowSmartReplies = () => {
+  if (smartReplies.length === 0 || messages.length === 0) return false;
+  const lastMessage = messages[messages.length - 1];
+  console.log(lastMessage.receiver_id)
+  // Show smart replies only if the last message was received by current user
+  // Based on your backend logic: sender_id contains receiver, receiver_id contains sender
+  // So current user received the message when sender_id equals current user ID
+  return lastMessage.receiver_id && lastMessage.receiver_id.toString() === data.user.user_id.toString();
+};
+  
+  const setupSocketListeners = () => {
+    socketService.onMessagesReceived((response) => {
       console.log("Messages fetched:", response.messages);
       setMessages(response.messages);
     });
 
-    socket.on("new_message", (newMessage) => {
-      console.log("New message received:", newMessage.message);
+    socketService.onNewMessage((newMessage) => {
+      console.log("New message received:", newMessage);
+      console.log("Message sender_id (actually receiver):", newMessage.sender_id);
+      console.log("Message receiver_id (actually sender):", newMessage.receiver_id);
+      console.log("Current user_id:", data.user.user_id);
+      
       setMessages((prevMessages) => [...prevMessages, newMessage]);
+      
+      // Auto-generate smart replies for received messages
+      // Since backend swaps sender/receiver:
+      // - sender_id actually contains the receiver ID
+      // - receiver_id actually contains the sender ID
+      // Generate smart replies when current user is the receiver (sender_id field equals current user)
+      if (newMessage.sender_id && newMessage.sender_id.toString() === data.user.user_id.toString()) {
+        console.log("Current user is receiver - generating smart replies");
+        generateSmartReplies();
+      } else {
+        console.log("Current user is sender - not generating smart replies");
+      }
     });
-    socket.emit("send_message",  {chat_id: data.chatId,
-      sender_email: email,
-      receiver_email: data.receiverEmail,
-      message: text});
 
-    socket.on("room_joined", (data) => {
+    socketService.onSmartRepliesGenerated((response) => {
+      setSmartReplies(response.suggestions);
+    });
+
+    socketService.onMessageTranslated((response) => {
+      setText(response.translated);
+      setIsTranslating(false);
+    });
+
+    socketService.onMessageEnhanced((response) => {
+      console.log("=== MESSAGE ENHANCED RESPONSE ===");
+      console.log("Response received:", response);
+      console.log("Original:", response.original);
+      console.log("Enhanced:", response.enhanced);
+      console.log("Type:", response.type);
+      
+      setText(response.enhanced);
+      setIsEnhancing(false);
+    });
+
+    socketService.onConversationSummarized((response) => {
+      setConversationSummary(response.summary);
+      setShowSummary(true);
+    });
+
+    socketService.onRoomJoined((data) => {
       console.log("Joined room:", data.chat_id);
     });
-
-    // Clean up socket listeners on component unmount
-    return () => {
-      console.log("Cleaning up socket listeners");
-      socket.off("connect");
-      socket.off("messages_fetched");
-      socket.off("new_message");
-      socket.off("room_joined");
-    };
-  }, [data.chatId]);
-  useEffect(() => {
-    if (chatPanelRef.current) {
-      chatPanelRef.current.scrollTop = chatPanelRef.current.scrollHeight;
-    }
-  }, [messages]);
-  const handleSend = () => {
-    const messageData = {
-      chat_id: data.chatId,
-      sender_email: data.user.email, // Assuming user object contains the sender's ID
-      receiver_email: email,
-      message: text,
-      // Include image if it's available
-      image: img
-        ? {
-            file_name: img.name,
-            file_type: img.type,
-            file_data: URL.createObjectURL(img), // Or handle image differently
-          }
-        : null,
-    };
-
-    // Emit the message event
-    socket.emit("send_message", messageData);
-
-    // Reset form fields
-    setText("");
-    setImg(null);
   };
 
-  return (
-    <div className="chat-panel flex flex-col h-screen w-full bg-zinc-600">
-  {/* Messages container */}
-  <div className="messages-container flex-1 overflow-y-auto p-3" ref={chatPanelRef}>
-    {messages.map((msg) => (
-      <div
-        key={msg.message_id}
-        className={`flex ${msg.sender_id === data.user.user_id ? "justify-end" : "justify-start"} mb-2`}
-      >
-        <div
-          className={`p-3 rounded-lg ${msg.sender_id === data.user.user_id ? "bg-blue-500 text-white" : "bg-gray-300 text-black"}`}
-        >
-          <p>{msg.message}</p>
-          <span className="block text-xs text-gray-600">{new Date(msg.timestamp).toLocaleString()}</span>
-        </div>
-      </div>
-    ))}
-  </div>
-  
-  {/* Input container */}
-  <div className="input-container flex p-3 bg-gray-800 sticky bottom-0 w-full">
-    <input
-      type="text"
-      value={text}
-      onChange={(e) => setText(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          handleSend();
-        }
-      }}
-      className="flex-1 p-2 border border-gray-300 rounded"
-      placeholder="Type a message"
-    />
-    <button
-      onClick={handleSend}
-      className="ml-2 bg-blue-500 text-white p-2 rounded"
-    >
-      Send
-    </button>
-  </div>
-</div>
+  // Message handling
+  const handleSend = () => {
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    console.log("No valid text to send");
+    return;
+  }
 
+  const messageData = {
+    chat_id: data.chatId,
+    sender_id: data.user.user_id,
+    sender_email: data.user.email,
+    receiver_id: receiverId || localStorage.getItem("ReceiverId"),
+    receiver_email: email,
+    message: text.trim(),
+    image: img ? {
+      file_name: img.name,
+      file_type: img.type,
+      file_data: URL.createObjectURL(img),
+    } : null,
+  };
+
+  console.log("Sending message with data:", messageData);
+  socketService.sendMessage(messageData);
+  setText("");
+  setImg(null);
+  setSmartReplies([]); // Clear smart replies when sending a message
+};
+
+  const handleSmartReplyClick = (reply) => {
+    setText(reply);
+    setSmartReplies([]);
+  };
+
+  // AI functions
+  const generateSmartReplies = () => {
+    console.log("Generating smart replies for chat:", data.chatId);
+    socketService.getSmartReplies(data.chatId);
+  };
+
+  const translateMessage = () => {
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      console.log("No valid text to translate");
+      return;
+    }
+    setIsTranslating(true);
+    socketService.translateMessage(text.trim(), selectedLanguage);
+  };
+
+  const enhanceMessage = () => {
+    console.log("=== ENHANCE MESSAGE DEBUG ===");
+    console.log("Text state:", text);
+    console.log("Text type:", typeof text);
+    console.log("Text value:", JSON.stringify(text));
+    
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      console.log("No valid text to enhance");
+      return;
+    }
+    
+    console.log("Text to enhance:", text);
+    console.log("Enhancement type:", enhancementType);
+    console.log("Socket connected:", socketService.isConnected);
+    console.log("Socket object:", socketService.getSocket());
+    
+    setIsEnhancing(true);
+    
+    const trimmedText = text.trim();
+    const enhanceData = {
+      text: trimmedText,
+      type: enhancementType
+    };
+    
+    console.log("Calling socketService.enhanceMessage with:", enhanceData);
+    socketService.enhanceMessage(trimmedText, enhancementType);
+    console.log("enhanceMessage call completed");
+  };
+
+  const summarizeConversation = () => {
+    socketService.summarizeConversation(data.chatId);
+  };
+
+  // UI handlers
+  const toggleAITools = () => {
+    setShowAITools(!showAITools);
+  };
+
+  const closeSummary = () => {
+    setShowSummary(false);
+    setConversationSummary("");
+  };
+
+  // Update receiver info when localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setEmail(localStorage.getItem("Email") || "");
+      setReceiverId(localStorage.getItem("ReceiverId") || "");
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  return (
+    <div className="chat-panel flex flex-col h-screen w-full bg-white">
+      {/* Header */}
+      <ChatHeader
+        onToggleAITools={toggleAITools}
+        onSummarizeConversation={summarizeConversation}
+        showAITools={showAITools}
+      />
+
+      {/* AI Tools Panel */}
+      <AIToolsPanel
+        isVisible={showAITools}
+        selectedLanguage={selectedLanguage}
+        onLanguageChange={setSelectedLanguage}
+        onTranslate={translateMessage}
+        isTranslating={isTranslating}
+        enhancementType={enhancementType}
+        onEnhancementTypeChange={setEnhancementType}
+        onEnhance={enhanceMessage}
+        isEnhancing={isEnhancing}
+        hasText={text.trim().length > 0}
+        inputText={text}
+        setInputText={setText}
+      />
+
+      {/* Conversation Summary Modal */}
+      <ConversationSummary
+        isVisible={showSummary}
+        summary={conversationSummary}
+        onClose={closeSummary}
+      />
+
+      {/* Messages Container */}
+      <MessagesContainer 
+        messages={messages}
+        currentUserId={data.user.user_id}
+        // Note: Backend swaps sender/receiver, so current user's messages have receiver_id matching currentUserId
+        isCurrentUserMessage={(message) => message.receiver_id && message.receiver_id.toString() === data.user.user_id.toString()}
+      />
+
+      {/* Smart Replies */}
+      <SmartReplies 
+  replies={smartReplies}
+  onReplyClick={handleSmartReplyClick}
+  isVisible={shouldShowSmartReplies()}
+/>
+
+      {/* Message Input */}
+      <MessageInput
+        text={text}
+        onTextChange={setText}
+        onSend={handleSend}
+        onGenerateSmartReplies={generateSmartReplies}
+      />
+    </div>
   );
 }
 

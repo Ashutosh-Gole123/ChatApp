@@ -337,7 +337,7 @@ export default function Sidebar() {
       <div
         className={`${
           open ? "w-1/6" : "w-20"
-        } duration-300 h-auto p-5 pt-8 bg-slate-700 relative`}
+        } duration-300 h-auto p-5 pt-8 bg-slate-900 relative`}
       >
         {/* Toggle button and UI elements */}
         <img
@@ -377,14 +377,14 @@ export default function Sidebar() {
         )}
 
         {/* Contact list */}
-        <ul className="pt-2 max-w-md divide-y divide-gray-500 hover:divide-grey-300">
+        <ul className="pt-2 max-w-md divide-y border-slate-700 hover:divide-grey-300">
           {contacts.length === 0 ? (
-            <li className="text-gray-300 text-sm p-2">No contacts yet</li>
+            <li className="text-slate-100 text-sm p-2">No contacts yet</li>
           ) : (
             sortedContacts.map((contact, index) => (
               <li
                 key={index}
-                className="flex text-gray-300 items-center gap-x-2 cursor-pointer p-2 hover:bg-slate-600 rounded-md"
+                className="flex text-slate-100 items-center gap-x-2 cursor-pointer p-2 hover:bg-slate-800 rounded-md"
               >
                 <img
                   className={`inline-block ${

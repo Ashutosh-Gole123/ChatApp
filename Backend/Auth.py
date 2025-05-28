@@ -23,7 +23,7 @@ def register_user(username, password, email, profile_image=None):
         password_hash = hashlib.sha256(password.encode()).hexdigest()
 
         sql_query = """
-            INSERT INTO Users (username, password_hash, email, profile_image)
+            INSERT INTO users (username, password_hash, email, profile_image)
             VALUES (%s, %s, %s, %s)
             """
             
@@ -46,7 +46,7 @@ def login_user(username, password):
 
             # SQL query to verify user credentials
         sql_query = """
-            SELECT * FROM Users WHERE email = %s AND password_hash = %s
+            SELECT * FROM users WHERE email = %s AND password_hash = %s
             """
             
         cursor.execute(sql_query, (username, password_hash))

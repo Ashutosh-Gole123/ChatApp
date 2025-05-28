@@ -62,7 +62,7 @@ export default function Header({sidebarVisible}) {
 
   return (
     <>
-      <div className={`flex  top-0 h-20 bg-slate-600 text-white p-3 z-10 transition-all duration-300 items-center justify-between  ${
+      <div className={`flex  top-0 h-20 bg-slate-800 text-white p-3 z-10 transition-all duration-300 items-center justify-between  ${
         sidebarVisible ? "left-[250px] right-0" : "left-0 right-0"
       }`}>
   <div className="flex items-center gap-x-4">

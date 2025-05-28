@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import base64
 from Auth import connection
 import logging
+from mysql.connector import Error
 
 load_dotenv()
 
@@ -20,35 +21,44 @@ connection = mysql.connector.connect(
 )
 
 def All_Users():
-    if connection.is_connected():
-        print("Connected to MySQL database")
-            
-        cursor = connection.cursor()
-        # SQL query to fetch all users' details
-        sql_query = "SELECT user_id, username, email, profile_image FROM Users"
-        cursor.execute(sql_query)
-        
-        # Fetch all user data
-        all_users = cursor.fetchall()
-        
-        users_list = []
-        for user in all_users:
-            user_id, username, email, profile_image = user
-            # Convert the binary image data to base64
-            profile_image_base64 = None
-            if profile_image:
-                profile_image_base64 = base64.b64encode(profile_image).decode('utf-8')
-            
-            
-            users_list.append({
-                "user_id": user_id,
-                "username": username,
-                "email": email,
-                "profile_image": profile_image_base64
-            })
-            
-        return users_list
+    try:
+        if connection.is_connected():
+            print("Connected to MySQL database")
+            cursor = connection.cursor()
 
+            # Check if 'user_id' column exists
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'user_id'")
+            result = cursor.fetchone()
+            if not result:
+                print("Column 'user_id' not found in users table.")
+                return []
+
+            # Query all users
+            sql_query = "SELECT user_id, username, email, profile_image FROM users"
+            cursor.execute(sql_query)
+            all_users = cursor.fetchall()
+
+            users_list = []
+            for user in all_users:
+                user_id, username, email, profile_image = user
+                profile_image_base64 = None
+                if profile_image:
+                    profile_image_base64 = base64.b64encode(profile_image).decode('utf-8')
+
+                users_list.append({
+                    "user_id": user_id,
+                    "username": username,
+                    "email": email,
+                    "profile_image": profile_image_base64
+                })
+
+            return users_list
+
+    except Error as e:
+        print("Error while fetching users:", e)
+        return []
+
+# Call the function
 All_Users()
 
 # Add these functions to your existing API.py file
@@ -61,7 +71,7 @@ def All_Users():
         cursor = connection.cursor(dictionary=True)
         cursor.execute("""
             SELECT user_id, username, email, profile_image
-            FROM Users
+            FROM users
         """)
         users = cursor.fetchall()
         
@@ -93,7 +103,7 @@ def Get_User_Contacts(email):
         cursor = connection.cursor(dictionary=True)
         
         # Get user ID from email
-        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (email,))
+        cursor.execute("SELECT user_id FROM users WHERE email = %s", (email,))
         user_result = cursor.fetchone()
         
         if not user_result:
@@ -104,8 +114,8 @@ def Get_User_Contacts(email):
         # Get all contacts for this user
         cursor.execute("""
             SELECT u.user_id, u.username, u.email, u.profile_image 
-            FROM Contacts c
-            JOIN Users u ON c.contact_user_id = u.user_id
+            FROM contact c
+            JOIN users u ON c.contact_user_id = u.user_id
             WHERE c.user_id = %s
         """, (user_id,))
         
@@ -139,10 +149,10 @@ def Add_Contact(user_email, contact_email):
         cursor = connection.cursor(dictionary=True)
         
         # Get user IDs from emails
-        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (user_email,))
+        cursor.execute("SELECT user_id FROM users WHERE email = %s", (user_email,))
         user_result = cursor.fetchone()
         
-        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (contact_email,))
+        cursor.execute("SELECT user_id FROM users WHERE email = %s", (contact_email,))
         contact_result = cursor.fetchone()
         
         if not user_result or not contact_result:
@@ -194,10 +204,10 @@ def Remove_Contact(user_email, contact_email):
         cursor = connection.cursor(dictionary=True)
         
         # Get user IDs from emails
-        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (user_email,))
+        cursor.execute("SELECT user_id FROM users WHERE email = %s", (user_email,))
         user_result = cursor.fetchone()
         
-        cursor.execute("SELECT user_id FROM Users WHERE email = %s", (contact_email,))
+        cursor.execute("SELECT user_id FROM users WHERE email = %s", (contact_email,))
         contact_result = cursor.fetchone()
         
         if not user_result or not contact_result:

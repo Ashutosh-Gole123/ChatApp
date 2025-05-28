@@ -36,7 +36,7 @@ app.config['SECRET_KEY'] = 'secret!'
 # Configure CORS for Flask
 CORS(app) 
 # Configure Flask-SocketIO
-socketio = SocketIO(app, cors_allowed_origins="http://localhost:5173")
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Hugging Face API configuration
 HF_API_KEY = os.getenv("HF_API_KEY")  # Get this from huggingface.co/settings/tokens
@@ -1404,4 +1404,5 @@ def remove_contact():
         cursor.close()
 
 if __name__ == '__main__':
-    socketio.run(app,debug=True)
+    port = int(os.environ.get("PORT", 5000))  # default to 5000 for local dev
+    socketio.run(app, host="0.0.0.0", port=port)
